@@ -4,6 +4,8 @@ char coap_response_buffer[1024]; // used by the client functions
 int resp_wait = 1;
 coap_optlist_t* optlist = NULL;
 
+const char* TAG = "CoAPs_client";
+
 void coaps_init()
 {
     // Initialize NVS (required by Wi-Fi/ETH)

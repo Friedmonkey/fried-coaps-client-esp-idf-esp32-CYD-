@@ -39,8 +39,6 @@ extern char coap_response_buffer[1024]; // adjust size as needed
 extern int resp_wait;
 extern coap_optlist_t* optlist;
 
-extern const char* TAG;
-
 void coaps_init();
 coap_response_t message_handler(coap_session_t* session, const coap_pdu_t* sent, const coap_pdu_t* received, const coap_mid_t mid);
 void coap_log_handler(coap_log_t level, const char* message);

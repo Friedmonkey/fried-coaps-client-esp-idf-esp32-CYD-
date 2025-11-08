@@ -4,7 +4,7 @@ char coap_response_buffer[1024]; // used by the client functions
 int resp_wait = 1;
 coap_optlist_t* optlist = NULL;
 
-const char* TAG = "CoAPs_client";
+static const char* COAPS_TAG = "FRIED_COAPS_CLIENT";
 
 void coaps_init()
 {
@@ -74,9 +74,9 @@ void coap_log_handler(coap_log_t level, const char* message)
     char* cp = strchr(message, '\n');
 
     if (cp)
-        ESP_LOG_LEVEL(esp_level, TAG, "%.*s", (int)(cp - message), message);
+        ESP_LOG_LEVEL(esp_level, COAPS_TAG, "%.*s", (int)(cp - message), message);
     else
-        ESP_LOG_LEVEL(esp_level, TAG, "%s", message);
+        ESP_LOG_LEVEL(esp_level, COAPS_TAG, "%s", message);
 }
 
 coap_address_t* coap_get_address(coap_uri_t* uri) {
@@ -84,7 +84,7 @@ coap_address_t* coap_get_address(coap_uri_t* uri) {
     char phostname[64]; // enough for IPv6 string
 
     if (uri->host.length >= sizeof(phostname)) {
-        ESP_LOGE(TAG, "Host string too long");
+        ESP_LOGE(COAPS_TAG, "Host string too long");
         return NULL;
     }
 
@@ -99,7 +99,7 @@ coap_address_t* coap_get_address(coap_uri_t* uri) {
         dst_addr.size = sizeof(dst_addr.addr.sin);
         dst_addr.addr.sin.sin_family = AF_INET;
         dst_addr.addr.sin.sin_port = htons(uri->port);
-        ESP_LOGI(TAG, "Parsed IPv4 address: %s", phostname);
+        ESP_LOGI(COAPS_TAG, "Parsed IPv4 address: %s", phostname);
         return &dst_addr;
     }
 
@@ -108,11 +108,11 @@ coap_address_t* coap_get_address(coap_uri_t* uri) {
         dst_addr.size = sizeof(dst_addr.addr.sin6);
         dst_addr.addr.sin6.sin6_family = AF_INET6;
         dst_addr.addr.sin6.sin6_port = htons(uri->port);
-        ESP_LOGI(TAG, "Parsed IPv6 address: %s", phostname);
+        ESP_LOGI(COAPS_TAG, "Parsed IPv6 address: %s", phostname);
         return &dst_addr;
     }
 
-    ESP_LOGE(TAG, "Invalid IP address: %s", phostname);
+    ESP_LOGE(COAPS_TAG, "Invalid IP address: %s", phostname);
     return NULL;
 }
 
@@ -127,15 +127,15 @@ int coap_build_optlist(coap_uri_t* uri)
     optlist = NULL;
 
     if (uri->scheme == COAP_URI_SCHEME_COAPS && !coap_dtls_is_supported()) {
-        ESP_LOGE(TAG, "MbedTLS DTLS Client Mode not configured");
+        ESP_LOGE(COAPS_TAG, "MbedTLS DTLS Client Mode not configured");
         return 0;
     }
     if (uri->scheme == COAP_URI_SCHEME_COAPS_TCP && !coap_tls_is_supported()) {
-        ESP_LOGE(TAG, "MbedTLS TLS Client Mode not configured");
+        ESP_LOGE(COAPS_TAG, "MbedTLS TLS Client Mode not configured");
         return 0;
     }
     if (uri->scheme == COAP_URI_SCHEME_COAP_TCP && !coap_tcp_is_supported()) {
-        ESP_LOGE(TAG, "TCP Client Mode not configured");
+        ESP_LOGE(COAPS_TAG, "TCP Client Mode not configured");
         return 0;
     }
 
@@ -217,7 +217,7 @@ char* CoAPsSend(coap_pdu_code_t method, bool wait, const char* fullurl, const ch
     /* Set up the CoAP context */
     ctx = coap_new_context(NULL);
     if (!ctx) {
-        ESP_LOGE(TAG, "coap_new_context() failed");
+        ESP_LOGE(COAPS_TAG, "coap_new_context() failed");
         goto clean_up;
     }
 
@@ -227,7 +227,7 @@ char* CoAPsSend(coap_pdu_code_t method, bool wait, const char* fullurl, const ch
     coap_register_response_handler(ctx, message_handler);
 
     if (coap_split_uri((const uint8_t*)fullurl, strlen(fullurl), &uri) == -1) {
-        ESP_LOGE(TAG, "CoAP server URI error");
+        ESP_LOGE(COAPS_TAG, "CoAP server URI error");
         goto clean_up;
     }
 
@@ -236,7 +236,7 @@ char* CoAPsSend(coap_pdu_code_t method, bool wait, const char* fullurl, const ch
 
     dst_addr = coap_get_address(&uri);
     if (!dst_addr) {
-        ESP_LOGE(TAG, "Failed to get destination address");
+        ESP_LOGE(COAPS_TAG, "Failed to get destination address");
         goto clean_up;
     }
 
@@ -250,7 +250,7 @@ char* CoAPsSend(coap_pdu_code_t method, bool wait, const char* fullurl, const ch
     }
 
     if (!session) {
-        ESP_LOGE(TAG, "coap_new_client_session() failed");
+        ESP_LOGE(COAPS_TAG, "coap_new_client_session() failed");
         goto clean_up;
     }
 
@@ -258,7 +258,7 @@ char* CoAPsSend(coap_pdu_code_t method, bool wait, const char* fullurl, const ch
     request = coap_new_pdu(coap_is_mcast(dst_addr) ? COAP_MESSAGE_NON : COAP_MESSAGE_CON,
         method, session);
     if (!request) {
-        ESP_LOGE(TAG, "coap_new_pdu() failed");
+        ESP_LOGE(COAPS_TAG, "coap_new_pdu() failed");
         goto clean_up;
     }
 
@@ -291,7 +291,7 @@ char* CoAPsSend(coap_pdu_code_t method, bool wait, const char* fullurl, const ch
         int result = coap_io_process(ctx, wait_ms > 1000 ? 1000 : wait_ms);
         if (result >= 0) {
             if (result >= wait_ms) {
-                ESP_LOGE(TAG, "No response from server");
+                ESP_LOGE(COAPS_TAG, "No response from server");
                 break;
             }
             else {
@@ -338,7 +338,7 @@ clean_up:
 //    /* Set up the CoAP context */
 //    ctx = coap_new_context(NULL);
 //    if (!ctx) {
-//        ESP_LOGE(TAG, "coap_new_context() failed");
+//        ESP_LOGE(COAPS_TAG, "coap_new_context() failed");
 //        goto clean_up;
 //    }
 //
@@ -346,7 +346,7 @@ clean_up:
 //    coap_register_response_handler(ctx, message_handler);
 //
 //    if (coap_split_uri((const uint8_t*)fullurl, strlen(fullurl), &uri) == -1) {
-//        ESP_LOGE(TAG, "CoAP server URI error");
+//        ESP_LOGE(COAPS_TAG, "CoAP server URI error");
 //        goto clean_up;
 //    }
 //
@@ -355,7 +355,7 @@ clean_up:
 //
 //    dst_addr = coap_get_address(&uri);
 //    if (!dst_addr) {
-//        ESP_LOGE(TAG, "Failed to get destination address");
+//        ESP_LOGE(COAPS_TAG, "Failed to get destination address");
 //        goto clean_up;
 //    }
 //
@@ -369,7 +369,7 @@ clean_up:
 //    }
 //
 //    if (!session) {
-//        ESP_LOGE(TAG, "coap_new_client_session() failed");
+//        ESP_LOGE(COAPS_TAG, "coap_new_client_session() failed");
 //        goto clean_up;
 //    }
 //
@@ -377,7 +377,7 @@ clean_up:
 //    request = coap_new_pdu(coap_is_mcast(dst_addr) ? COAP_MESSAGE_NON : COAP_MESSAGE_CON,
 //        method, session);
 //    if (!request) {
-//        ESP_LOGE(TAG, "coap_new_pdu() failed");
+//        ESP_LOGE(COAPS_TAG, "coap_new_pdu() failed");
 //        goto clean_up;
 //    }
 //
@@ -412,7 +412,7 @@ clean_up:
 //            int result = coap_io_process(ctx, wait_ms > 1000 ? 1000 : wait_ms);
 //            if (result >= 0) {
 //                if (result >= wait_ms) {
-//                    ESP_LOGE(TAG, "No response from server");
+//                    ESP_LOGE(COAPS_TAG, "No response from server");
 //                    break;
 //                }
 //                else {
@@ -476,7 +476,7 @@ char* CoAPsPut(bool wait, const char* fullurl, const char* identity, const char*
 //    /* Set up the CoAP context */
 //    ctx = coap_new_context(NULL);
 //    if (!ctx) {
-//        ESP_LOGE(TAG, "coap_new_context() failed");
+//        ESP_LOGE(COAPS_TAG, "coap_new_context() failed");
 //        goto clean_up;
 //    }
 //
@@ -484,7 +484,7 @@ char* CoAPsPut(bool wait, const char* fullurl, const char* identity, const char*
 //    coap_register_response_handler(ctx, message_handler);
 //
 //    if (coap_split_uri((const uint8_t*)fullurl, strlen(fullurl), &uri) == -1) {
-//        ESP_LOGE(TAG, "CoAP server URI error");
+//        ESP_LOGE(COAPS_TAG, "CoAP server URI error");
 //        goto clean_up;
 //    }
 //
@@ -493,7 +493,7 @@ char* CoAPsPut(bool wait, const char* fullurl, const char* identity, const char*
 //
 //    dst_addr = coap_get_address(&uri);
 //    if (!dst_addr) {
-//        ESP_LOGE(TAG, "Failed to get destination address");
+//        ESP_LOGE(COAPS_TAG, "Failed to get destination address");
 //        goto clean_up;
 //    }
 //
@@ -507,7 +507,7 @@ char* CoAPsPut(bool wait, const char* fullurl, const char* identity, const char*
 //    }
 //
 //    if (!session) {
-//        ESP_LOGE(TAG, "coap_new_client_session() failed");
+//        ESP_LOGE(COAPS_TAG, "coap_new_client_session() failed");
 //        goto clean_up;
 //    }
 //
@@ -515,7 +515,7 @@ char* CoAPsPut(bool wait, const char* fullurl, const char* identity, const char*
 //    request = coap_new_pdu(coap_is_mcast(dst_addr) ? COAP_MESSAGE_NON : COAP_MESSAGE_CON,
 //        COAP_REQUEST_CODE_POST, session);
 //    if (!request) {
-//        ESP_LOGE(TAG, "coap_new_pdu() failed");
+//        ESP_LOGE(COAPS_TAG, "coap_new_pdu() failed");
 //        goto clean_up;
 //    }
 //
@@ -548,7 +548,7 @@ char* CoAPsPut(bool wait, const char* fullurl, const char* identity, const char*
 //        int result = coap_io_process(ctx, wait_ms > 1000 ? 1000 : wait_ms);
 //        if (result >= 0) {
 //            if (result >= wait_ms) {
-//                ESP_LOGE(TAG, "No response from server");
+//                ESP_LOGE(COAPS_TAG, "No response from server");
 //                break;
 //            }
 //            else {
@@ -592,7 +592,7 @@ char* CoAPsPut(bool wait, const char* fullurl, const char* identity, const char*
 //    /* Set up the CoAP context */
 //    ctx = coap_new_context(NULL);
 //    if (!ctx) {
-//        ESP_LOGE(TAG, "coap_new_context() failed");
+//        ESP_LOGE(COAPS_TAG, "coap_new_context() failed");
 //        goto clean_up;
 //    }
 //
@@ -600,7 +600,7 @@ char* CoAPsPut(bool wait, const char* fullurl, const char* identity, const char*
 //    coap_register_response_handler(ctx, message_handler);
 //
 //    if (coap_split_uri((const uint8_t*)fullurl, strlen(fullurl), &uri) == -1) {
-//        ESP_LOGE(TAG, "CoAP server URI error");
+//        ESP_LOGE(COAPS_TAG, "CoAP server URI error");
 //        goto clean_up;
 //    }
 //
@@ -609,7 +609,7 @@ char* CoAPsPut(bool wait, const char* fullurl, const char* identity, const char*
 //
 //    dst_addr = coap_get_address(&uri);
 //    if (!dst_addr) {
-//        ESP_LOGE(TAG, "Failed to get destination address");
+//        ESP_LOGE(COAPS_TAG, "Failed to get destination address");
 //        goto clean_up;
 //    }
 //
@@ -623,7 +623,7 @@ char* CoAPsPut(bool wait, const char* fullurl, const char* identity, const char*
 //    }
 //
 //    if (!session) {
-//        ESP_LOGE(TAG, "coap_new_client_session() failed");
+//        ESP_LOGE(COAPS_TAG, "coap_new_client_session() failed");
 //        goto clean_up;
 //    }
 //
@@ -631,7 +631,7 @@ char* CoAPsPut(bool wait, const char* fullurl, const char* identity, const char*
 //    request = coap_new_pdu(coap_is_mcast(dst_addr) ? COAP_MESSAGE_NON : COAP_MESSAGE_CON,
 //        COAP_REQUEST_CODE_PUT, session);
 //    if (!request) {
-//        ESP_LOGE(TAG, "coap_new_pdu() failed");
+//        ESP_LOGE(COAPS_TAG, "coap_new_pdu() failed");
 //        goto clean_up;
 //    }
 //
@@ -664,7 +664,7 @@ char* CoAPsPut(bool wait, const char* fullurl, const char* identity, const char*
 //        int result = coap_io_process(ctx, wait_ms > 1000 ? 1000 : wait_ms);
 //        if (result >= 0) {
 //            if (result >= wait_ms) {
-//                ESP_LOGE(TAG, "No response from server");
+//                ESP_LOGE(COAPS_TAG, "No response from server");
 //                break;
 //            }
 //            else {
